@@ -1,0 +1,85 @@
+import type { ProductionInput } from "../../src/types";
+
+export const validProductionInput: ProductionInput = {
+  project: {
+    title: "The Shadow Crown",
+    creatorName: "Nova",
+    language: "Vietnamese",
+    format: "webnovel",
+    genres: ["dark fantasy"],
+    tone: "dramatic",
+    targetAudience: "young adult",
+  },
+  story: {
+    mainPremise: "A cursed crown awakens.",
+    mainConflict: "Power demands sacrifice.",
+    endingDirection: "Bittersweet victory",
+    openingSituation: "A ruined chapel discovery",
+    mainMystery: "Who forged the crown?",
+    romanceAngle: "Slow burn alliance",
+    powerSystemNotes: "Relics bind memory",
+    importantThemes: ["power", "identity"],
+  },
+  world: {
+    worldSetting: "Fallen kingdom",
+    worldRules: "Relics demand a cost",
+    magicSystem: "Blood-bound artifacts",
+    importantLocations: ["Ruined chapel"],
+    importantOrganizations: ["The Ash Court"],
+    technologyLevel: "pre-industrial",
+    socialStructure: "noble houses",
+  },
+  characters: [
+    {
+      id: "protagonist",
+      name: "Arin",
+      role: "protagonist",
+      visualDescription: "Black hair, silver eyes",
+      personality: ["driven", "guarded"],
+      motivation: "Protect the only family left",
+      fear: "Losing control",
+      secret: "The crown recognizes him",
+      voice: "Low and restrained",
+      relationships: [
+        {
+          characterId: "antagonist",
+          relation: "enemy",
+          notes: "mutual fascination",
+        },
+      ],
+    },
+    {
+      id: "antagonist",
+      name: "Veyra",
+      role: "antagonist",
+      visualDescription: "White armor, gold mask",
+      personality: ["calm", "calculating"],
+      motivation: "Claim the relic",
+      fear: "Public failure",
+      secret: "Bound to the Ash Court",
+      voice: "Elegant and precise",
+      relationships: [
+        {
+          characterId: "protagonist",
+          relation: "enemy",
+          notes: "needs him alive",
+        },
+      ],
+    },
+  ],
+  video: {
+    videoFormat: "short-episode",
+    aspectRatio: "16:9",
+    visualStyle: "cinematic dark fantasy anime-realism",
+    cameraStyle: "slow cinematic camera movement, dramatic close-ups",
+    imageStyleNotes: "moonlit contrast and heavy atmosphere",
+    videoMotionStyle: "subtle atmospheric motion",
+    voiceoverStyle: "dramatic narration",
+    subtitleStyle: "clean readable subtitles",
+  },
+  chapterConfig: {
+    totalChapters: 1,
+    targetWordsPerChapter: { min: 1800, max: 2500 },
+    scenesPerChapter: { min: 8, max: 12 },
+  },
+};

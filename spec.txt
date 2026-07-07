@@ -1,0 +1,1641 @@
+# PHASE 1 PLAN — Novel-to-Video Script Production Workflow
+
+## 1. Phase 1 Objective
+
+Build a private local workflow app that allows one creator to input core novel information, enter the desired number of chapters, click Start, and generate a complete production package for a long-form WebNovel / Light Novel series.
+
+Phase 1 does **not** generate real images or real videos.
+
+Phase 1 generates:
+
+* Story Bible
+* World Bible
+* Character Bible
+* Visual Reference Descriptions
+* Arc Plan
+* Chapter Plan
+* Chapter Drafts
+* Scene Breakdowns
+* Continuity Reports
+* Revised Final Chapters
+* Storyboards
+* Image Prompts
+* Video Prompts
+* Voiceover Scripts
+* Subtitle Drafts
+* Export Package
+
+This phase should behave like a **Novel-to-Video Script Production Engine**, not a final video rendering engine.
+
+---
+
+## 2. Product Direction
+
+This project is a private local workflow app for one creator.
+
+The primary user flow is:
+
+1. User opens a local web UI.
+2. User fills in a novel production form.
+3. User enters total chapter count.
+4. User clicks **Start**.
+5. The system runs the entire production workflow end-to-end.
+6. The system writes all generated files into an output project folder.
+7. The user reviews the generated text, storyboard, prompts, and production assets.
+
+The user should not manually run separate commands for every chapter.
+
+CLI may exist only as a secondary developer interface.
+
+The main interface is a local web UI with a Start button.
+
+---
+
+## 3. Phase 1 Scope
+
+### In Scope
+
+Build:
+
+* Local web UI
+* Start workflow button
+* Input form
+* File-based project output
+* Workflow runner
+* Step-by-step production pipeline
+* Deterministic placeholder generation
+* Zod schema validation
+* Progress state tracking
+* Logs
+* Error reporting
+* Exportable output folder
+* Unit tests for core services and workflows
+
+### Out of Scope
+
+Do not build:
+
+* Real AI model integration
+* OpenAI / Gemini / Anthropic calls
+* Image generation API calls
+* Image-to-video API calls
+* Voice generation API calls
+* Real MP4 rendering
+* User authentication
+* Multi-user support
+* Cloud deployment
+* Database
+* Payment system
+* SaaS features
+
+---
+
+## 4. Tech Stack
+
+Use:
+
+* Node.js
+* TypeScript
+* Vite
+* React
+* Express or Fastify
+* Zod
+* fs/promises
+* Vitest
+* ESLint
+* Prettier
+
+Recommended structure:
+
+* Frontend: React + Vite
+* Backend: Node.js + TypeScript
+* Storage: local filesystem
+* Validation: Zod
+* Testing: Vitest
+
+No database in Phase 1.
+
+No external AI API in Phase 1.
+
+---
+
+## 5. Core User Flow
+
+```text
+Open Local Web UI
+        ↓
+Fill Novel Production Form
+        ↓
+Enter Total Chapters
+        ↓
+Click Start
+        ↓
+Validate Input
+        ↓
+Create Output Project Folder
+        ↓
+Generate Knowledge Base
+        ↓
+Generate Story Plan
+        ↓
+Generate Chapter Plan
+        ↓
+Loop Chapter 1 → N
+        ↓
+Generate Chapter Assets
+        ↓
+Update Timeline
+        ↓
+Export Package
+        ↓
+Done
+```
+
+---
+
+## 6. Main UI Requirements
+
+Create a local web UI with one main page.
+
+### Page: Novel Production Setup
+
+The page should include a form with these fields:
+
+#### Basic Information
+
+* Project title
+* Pen name / creator name
+* Language
+* Novel format
+* Genre list
+* Tone
+* Target audience
+
+#### Chapter Configuration
+
+* Total chapters
+* Target words per chapter minimum
+* Target words per chapter maximum
+* Scenes per chapter minimum
+* Scenes per chapter maximum
+
+Recommended defaults:
+
+```json
+{
+  "totalChapters": 10,
+  "targetWordsPerChapter": {
+    "min": 1800,
+    "max": 2500
+  },
+  "scenesPerChapter": {
+    "min": 8,
+    "max": 12
+  }
+}
+```
+
+#### Story Input
+
+* Main premise
+* Main conflict
+* Ending direction
+* Opening situation
+* Main mystery
+* Romance angle
+* Fantasy / power system notes
+* Important themes
+
+#### World Input
+
+* World setting
+* World rules
+* Magic / power system
+* Important locations
+* Important organizations
+* Technology level
+* Social structure
+
+#### Character Input
+
+Allow user to add multiple characters.
+
+Each character should include:
+
+* Name
+* Role
+* Age
+* Gender presentation / visual type
+* Personality
+* Motivation
+* Fear
+* Secret
+* Visual description
+* Voice / speaking style
+* Relationship notes
+
+At minimum, require:
+
+* Protagonist
+* Antagonist or main opposing force
+
+#### Video Adaptation Input
+
+* Video format
+* Aspect ratio
+* Visual style
+* Camera style
+* Image generation style notes
+* Video motion style
+* Voiceover style
+* Subtitle style
+
+Recommended defaults:
+
+```json
+{
+  "videoFormat": "short-episode",
+  "aspectRatio": "16:9",
+  "visualStyle": "cinematic dark fantasy anime-realism",
+  "cameraStyle": "slow cinematic camera movement, dramatic close-ups",
+  "voiceoverStyle": "dramatic narration",
+  "subtitleStyle": "clean readable subtitles"
+}
+```
+
+### UI Actions
+
+Add buttons:
+
+* Start Production
+* Reset Form
+* Open Output Folder
+* View Logs
+
+For Phase 1, "Open Output Folder" can simply show the generated path.
+
+---
+
+## 7. Backend API Requirements
+
+Create backend endpoints.
+
+### POST /api/production/start
+
+Starts a new production workflow.
+
+Request body:
+
+```json
+{
+  "project": {},
+  "story": {},
+  "world": {},
+  "characters": [],
+  "video": {},
+  "chapterConfig": {}
+}
+```
+
+Response:
+
+```json
+{
+  "runId": "run_...",
+  "projectSlug": "shadow-crown",
+  "status": "started"
+}
+```
+
+### GET /api/production/status/:runId
+
+Returns current workflow progress.
+
+Response:
+
+```json
+{
+  "runId": "run_...",
+  "status": "running",
+  "currentStep": "generate_chapter_draft",
+  "currentChapter": 3,
+  "totalChapters": 10,
+  "progressPercent": 32,
+  "logs": []
+}
+```
+
+### GET /api/production/result/:runId
+
+Returns final output information.
+
+Response:
+
+```json
+{
+  "runId": "run_...",
+  "status": "completed",
+  "outputPath": "outputs/shadow-crown",
+  "generatedFiles": []
+}
+```
+
+### POST /api/production/cancel/:runId
+
+Cancels a running workflow.
+
+For Phase 1, cancellation can be simple:
+
+* Mark run as cancelled.
+* Stop before starting the next chapter.
+
+---
+
+## 8. Output Folder Structure
+
+When the user starts production, create:
+
+```text
+outputs/
+└── <project-slug>/
+    ├── input/
+    │   └── production-input.json
+    ├── knowledge-base/
+    │   ├── story-bible.md
+    │   ├── world-bible.md
+    │   ├── character-bible.md
+    │   ├── visual-reference-bible.md
+    │   ├── characters/
+    │   │   ├── character-001.json
+    │   │   └── character-002.json
+    │   ├── locations/
+    │   │   └── locations.json
+    │   ├── organizations/
+    │   │   └── organizations.json
+    │   ├── items/
+    │   │   └── items.json
+    │   └── timeline/
+    │       └── timeline-master.json
+    ├── planning/
+    │   ├── full-story-plan.md
+    │   ├── arc-plan.json
+    │   └── chapter-plan.json
+    ├── chapters/
+    │   ├── chapter-0001/
+    │   │   ├── outline.md
+    │   │   ├── chapter-draft.md
+    │   │   ├── scenes.json
+    │   │   ├── continuity-report.md
+    │   │   ├── chapter-final.md
+    │   │   ├── storyboard.md
+    │   │   ├── image-prompts.json
+    │   │   ├── video-prompts.json
+    │   │   ├── voiceover.md
+    │   │   └── subtitles.srt
+    │   └── chapter-0002/
+    ├── exports/
+    │   ├── full-novel.md
+    │   ├── all-scenes.json
+    │   ├── all-storyboards.md
+    │   ├── all-image-prompts.json
+    │   ├── all-video-prompts.json
+    │   ├── all-voiceovers.md
+    │   ├── all-subtitles.srt
+    │   ├── production-summary.md
+    │   └── final-continuity-report.md
+    ├── logs/
+    │   └── run.log
+    └── run-state.json
+```
+
+---
+
+## 9. Data Schemas
+
+Use Zod for all important data.
+
+### ProductionInput
+
+```ts
+export const ProductionInputSchema = z.object({
+  project: ProjectConfigSchema,
+  story: StoryInputSchema,
+  world: WorldInputSchema,
+  characters: z.array(CharacterInputSchema).min(1),
+  video: VideoConfigSchema,
+  chapterConfig: ChapterConfigSchema
+});
+```
+
+### ProjectConfig
+
+```ts
+export const ProjectConfigSchema = z.object({
+  title: z.string().min(1),
+  creatorName: z.string().optional(),
+  language: z.string().default("Vietnamese"),
+  format: z.enum(["webnovel", "light-novel", "serial-fiction"]),
+  genres: z.array(z.string()).min(1),
+  tone: z.string().min(1),
+  targetAudience: z.string().optional()
+});
+```
+
+### ChapterConfig
+
+```ts
+export const ChapterConfigSchema = z.object({
+  totalChapters: z.number().int().min(1).max(300),
+  targetWordsPerChapter: z.object({
+    min: z.number().int().min(500),
+    max: z.number().int().min(500)
+  }),
+  scenesPerChapter: z.object({
+    min: z.number().int().min(3),
+    max: z.number().int().min(3)
+  })
+});
+```
+
+### CharacterInput
+
+```ts
+export const CharacterInputSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  role: z.enum([
+    "protagonist",
+    "antagonist",
+    "supporting",
+    "mentor",
+    "love_interest",
+    "rival",
+    "other"
+  ]),
+  age: z.number().int().optional(),
+  visualDescription: z.string().min(1),
+  personality: z.array(z.string()).default([]),
+  motivation: z.string().optional(),
+  fear: z.string().optional(),
+  secret: z.string().optional(),
+  voice: z.string().optional(),
+  relationships: z.array(
+    z.object({
+      characterId: z.string(),
+      relation: z.string(),
+      notes: z.string().optional()
+    })
+  ).default([])
+});
+```
+
+### Scene
+
+```ts
+export const SceneSchema = z.object({
+  id: z.string(),
+  chapterNumber: z.number().int(),
+  sceneNumber: z.number().int(),
+  title: z.string(),
+  location: z.string(),
+  characters: z.array(z.string()),
+  purpose: z.string(),
+  summary: z.string(),
+  visualFocus: z.string(),
+  dialogueFocus: z.string().optional(),
+  emotionalBeat: z.string(),
+  videoPotential: z.enum(["low", "medium", "high"])
+});
+```
+
+### ImagePrompt
+
+```ts
+export const ImagePromptSchema = z.object({
+  id: z.string(),
+  chapterNumber: z.number().int(),
+  sceneNumber: z.number().int(),
+  prompt: z.string(),
+  negativePrompt: z.string().optional(),
+  aspectRatio: z.enum(["16:9", "9:16", "1:1"]),
+  style: z.string(),
+  characterReferences: z.array(z.string()),
+  characterConsistencyNotes: z.array(z.string())
+});
+```
+
+### VideoPrompt
+
+```ts
+export const VideoPromptSchema = z.object({
+  id: z.string(),
+  chapterNumber: z.number().int(),
+  sceneNumber: z.number().int(),
+  prompt: z.string(),
+  cameraMovement: z.string(),
+  durationSeconds: z.number().int(),
+  motionNotes: z.string(),
+  soundDesignNotes: z.string().optional()
+});
+```
+
+### RunState
+
+```ts
+export const RunStateSchema = z.object({
+  runId: z.string(),
+  projectSlug: z.string(),
+  status: z.enum(["idle", "running", "completed", "failed", "cancelled"]),
+  currentStep: z.string().optional(),
+  currentChapter: z.number().int().optional(),
+  totalChapters: z.number().int(),
+  progressPercent: z.number(),
+  startedAt: z.string(),
+  finishedAt: z.string().optional(),
+  outputPath: z.string(),
+  error: z.string().optional(),
+  logs: z.array(z.string()).default([])
+});
+```
+
+---
+
+## 10. Core Workflow
+
+Implement main workflow:
+
+```ts
+runNovelProduction(input: ProductionInput): Promise<ProductionResult>
+```
+
+Workflow steps:
+
+```text
+1. validateInput
+2. createProjectFolder
+3. saveOriginalInput
+4. generateStoryBible
+5. generateWorldBible
+6. generateCharacterBible
+7. generateVisualReferenceBible
+8. generateArcPlan
+9. generateChapterPlan
+10. for each chapter:
+    10.1 generateChapterOutline
+    10.2 generateChapterDraft
+    10.3 splitChapterIntoScenes
+    10.4 runContinuityCheck
+    10.5 reviseChapter
+    10.6 generateStoryboard
+    10.7 generateImagePrompts
+    10.8 generateVideoPrompts
+    10.9 generateVoiceover
+    10.10 generateSubtitles
+    10.11 updateTimeline
+11. exportFullNovel
+12. exportProductionAssets
+13. writeFinalSummary
+14. markRunCompleted
+```
+
+All generation in Phase 1 must be deterministic placeholder generation.
+
+No AI calls.
+
+---
+
+## 11. Step Specifications
+
+### 11.1 validateInput
+
+Validate the input using Zod.
+
+Fail if:
+
+* title is missing
+* total chapters is invalid
+* no protagonist exists
+* target word count min > max
+* scenes per chapter min > max
+* visual style is missing
+
+Output:
+
+* validated input object
+
+---
+
+### 11.2 createProjectFolder
+
+Create a slug from the project title.
+
+Example:
+
+```text
+The Shadow Crown
+```
+
+becomes:
+
+```text
+the-shadow-crown
+```
+
+If folder exists, append timestamp:
+
+```text
+the-shadow-crown-2026-07-07-2230
+```
+
+Create all required folders.
+
+---
+
+### 11.3 saveOriginalInput
+
+Save:
+
+```text
+input/production-input.json
+```
+
+This file is important because the whole project can be regenerated from it later.
+
+---
+
+### 11.4 generateStoryBible
+
+Create:
+
+```text
+knowledge-base/story-bible.md
+```
+
+Content should include:
+
+* Title
+* Format
+* Genres
+* Tone
+* Target audience
+* Main premise
+* Main conflict
+* Main mystery
+* Romance angle
+* Ending direction
+* Core themes
+* Long-term story promise
+
+---
+
+### 11.5 generateWorldBible
+
+Create:
+
+```text
+knowledge-base/world-bible.md
+```
+
+Content should include:
+
+* World overview
+* Power system
+* World rules
+* Social structure
+* Technology level
+* Important locations
+* Important organizations
+* Visual atmosphere
+* Rules that must not be broken
+
+---
+
+### 11.6 generateCharacterBible
+
+Create:
+
+```text
+knowledge-base/character-bible.md
+```
+
+Also create one JSON file per character:
+
+```text
+knowledge-base/characters/<character-id>.json
+```
+
+Each character section must include:
+
+* Name
+* Role
+* Appearance
+* Personality
+* Motivation
+* Fear
+* Secret
+* Voice
+* Relationships
+* Character arc direction
+* Visual consistency rules
+
+---
+
+### 11.7 generateVisualReferenceBible
+
+Create:
+
+```text
+knowledge-base/visual-reference-bible.md
+```
+
+This file is critical for future image/video consistency.
+
+For each character, include:
+
+* Stable visual identity
+* Face description
+* Hair
+* Eyes
+* Body type
+* Clothing style
+* Signature colors
+* Accessories
+* Expressions
+* What must not change
+* Prompt fragment
+
+Example:
+
+```md
+## Character: Arin
+
+Reference ID: character:arin
+
+Stable Visual Identity:
+Arin is a young male protagonist with silver-gray eyes, messy black hair, a lean frame, and a long dark travel coat.
+
+Must Not Change:
+- Eye color must remain silver-gray.
+- Hair must remain black.
+- Body type must remain lean.
+- Signature coat must remain dark.
+
+Prompt Fragment:
+Use character reference character:arin. Maintain silver-gray eyes, messy black hair, lean frame, and long dark travel coat.
+```
+
+---
+
+### 11.8 generateArcPlan
+
+Create:
+
+```text
+planning/arc-plan.json
+```
+
+For Phase 1, generate arcs deterministically based on total chapter count.
+
+Recommended logic:
+
+* 1–10 chapters: 1 arc
+* 11–30 chapters: 3 arcs
+* 31–60 chapters: 5 arcs
+* 61–100 chapters: 7 arcs
+* 100+ chapters: 10 arcs
+
+Each arc should include:
+
+* id
+* title
+* startChapter
+* endChapter
+* premise
+* mainConflict
+* keyReveals
+* emotionalProgression
+* expectedEnding
+
+---
+
+### 11.9 generateChapterPlan
+
+Create:
+
+```text
+planning/chapter-plan.json
+```
+
+Generate one entry per chapter.
+
+Each chapter plan should include:
+
+* chapterNumber
+* title
+* arcId
+* mainGoal
+* mainConflict
+* requiredCharacters
+* requiredLocations
+* emotionalBeat
+* mysteryProgress
+* romanceProgress
+* endingHook
+* videoFocus
+
+For Phase 1, placeholder generation is acceptable, but the output should look structurally realistic.
+
+---
+
+### 11.10 generateChapterOutline
+
+For each chapter, create:
+
+```text
+chapters/chapter-0001/outline.md
+```
+
+Include:
+
+* Chapter title
+* Chapter goal
+* Opening hook
+* Required characters
+* Required locations
+* Key events
+* Main conflict
+* Emotional beat
+* Ending hook
+* Video adaptation notes
+
+---
+
+### 11.11 generateChapterDraft
+
+Create:
+
+```text
+chapters/chapter-0001/chapter-draft.md
+```
+
+For Phase 1:
+
+* Do not attempt to generate a perfect long chapter.
+* Generate deterministic placeholder prose.
+* The draft should include scene headings.
+* Each scene should contain enough content for testing downstream steps.
+
+Structure:
+
+```md
+# Chapter 0001 — Title
+
+## Scene 01 — Scene Title
+
+[Placeholder prose...]
+
+## Scene 02 — Scene Title
+
+[Placeholder prose...]
+```
+
+---
+
+### 11.12 splitChapterIntoScenes
+
+Create:
+
+```text
+chapters/chapter-0001/scenes.json
+```
+
+Generate scenes based on chapter config.
+
+Each scene should reference character IDs, not full descriptions.
+
+Important:
+
+```json
+{
+  "characters": ["protagonist"]
+}
+```
+
+Do not duplicate full visual descriptions inside scenes.
+
+Visual descriptions should come from the visual reference bible later.
+
+---
+
+### 11.13 runContinuityCheck
+
+Create:
+
+```text
+chapters/chapter-0001/continuity-report.md
+```
+
+Check:
+
+* Scene count is within configured range
+* All scene character IDs exist
+* All scene locations are not empty
+* Every scene has a visual focus
+* Every scene has an emotional beat
+* Every scene has a purpose
+* Chapter has an ending hook
+* No unknown character references
+* No missing required characters from chapter plan
+
+Report format:
+
+```md
+# Continuity Report — Chapter 0001
+
+## Status
+
+PASS / WARN / FAIL
+
+## Issues
+
+## Character Consistency
+
+## Timeline Consistency
+
+## Worldbuilding Consistency
+
+## Visual Consistency
+
+## Video Adaptation Notes
+
+## Recommended Fixes
+```
+
+---
+
+### 11.14 reviseChapter
+
+Create:
+
+```text
+chapters/chapter-0001/chapter-final.md
+```
+
+For Phase 1:
+
+* If no major issue: copy draft to final and add a revision note.
+* If issues exist: add a "Revision Notes" section at the bottom.
+* Do not implement advanced rewriting yet.
+
+---
+
+### 11.15 generateStoryboard
+
+Create:
+
+```text
+chapters/chapter-0001/storyboard.md
+```
+
+Each scene becomes:
+
+```md
+## Scene 01 — Title
+
+Location:
+Characters:
+Visual Focus:
+Camera Direction:
+Emotional Beat:
+Video Potential:
+Sound Mood:
+```
+
+Camera direction should be deterministic.
+
+Examples:
+
+* Wide establishing shot
+* Slow push-in
+* Close-up on character expression
+* Over-the-shoulder shot
+* Low-angle dramatic shot
+
+---
+
+### 11.16 generateImagePrompts
+
+Create:
+
+```text
+chapters/chapter-0001/image-prompts.json
+```
+
+Each scene gets exactly one image prompt.
+
+Prompt must include:
+
+* Location
+* Scene mood
+* Visual focus
+* Character reference IDs
+* Style
+* Aspect ratio
+* Consistency notes
+
+Important:
+
+Do not invent new character appearances.
+
+Use references:
+
+```text
+character:<character-id>
+```
+
+Example:
+
+```json
+{
+  "id": "image-ch0001-sc001",
+  "chapterNumber": 1,
+  "sceneNumber": 1,
+  "prompt": "Cinematic dark fantasy scene. Use character reference character:protagonist. The protagonist stands in a ruined chapel under moonlight. Visual focus: a black crown on a broken altar. Mood: dread and curiosity. Style: cinematic dark fantasy anime-realism. Aspect ratio 16:9.",
+  "aspectRatio": "16:9",
+  "style": "cinematic dark fantasy anime-realism",
+  "characterReferences": ["character:protagonist"],
+  "characterConsistencyNotes": [
+    "Do not change the protagonist's stable visual identity.",
+    "Follow knowledge-base/visual-reference-bible.md."
+  ]
+}
+```
+
+---
+
+### 11.17 generateVideoPrompts
+
+Create:
+
+```text
+chapters/chapter-0001/video-prompts.json
+```
+
+Each scene gets exactly one video prompt.
+
+Prompt must include:
+
+* Starting frame idea
+* Camera movement
+* Subject movement
+* Atmosphere
+* Duration
+* Sound design notes
+
+Example:
+
+```json
+{
+  "id": "video-ch0001-sc001",
+  "chapterNumber": 1,
+  "sceneNumber": 1,
+  "prompt": "Start from the generated image for scene 1. Slowly push in toward the black crown as candlelight flickers. The protagonist hesitates before reaching forward. Dust moves through moonlight.",
+  "cameraMovement": "slow push-in",
+  "durationSeconds": 6,
+  "motionNotes": "subtle candle flicker, drifting dust, slight hand movement",
+  "soundDesignNotes": "low wind, distant whisper, soft cloth movement"
+}
+```
+
+---
+
+### 11.18 generateVoiceover
+
+Create:
+
+```text
+chapters/chapter-0001/voiceover.md
+```
+
+For Phase 1:
+
+* Generate narration from scene summaries.
+* Keep it readable for future TTS.
+* Do not use real TTS yet.
+
+Format:
+
+```md
+# Voiceover — Chapter 0001
+
+## Scene 01
+
+Narration text...
+
+## Scene 02
+
+Narration text...
+```
+
+---
+
+### 11.19 generateSubtitles
+
+Create:
+
+```text
+chapters/chapter-0001/subtitles.srt
+```
+
+For Phase 1:
+
+* Generate simple placeholder SRT.
+* Use estimated timestamps.
+* 5–8 seconds per scene is acceptable.
+
+Example:
+
+```srt
+1
+00:00:00,000 --> 00:00:06,000
+The ruined chapel waited in silence.
+
+2
+00:00:06,000 --> 00:00:12,000
+A black crown rested on the broken altar.
+```
+
+---
+
+### 11.20 updateTimeline
+
+Create or update:
+
+```text
+knowledge-base/timeline/timeline-master.json
+```
+
+Append chapter-level events.
+
+Each chapter timeline entry should include:
+
+* chapterNumber
+* majorEvents
+* characterStateChanges
+* relationshipChanges
+* newCanonFacts
+* unresolvedMysteries
+* currentLocations
+
+---
+
+### 11.21 exportFullNovel
+
+Create:
+
+```text
+exports/full-novel.md
+```
+
+Concatenate all `chapter-final.md` files in order.
+
+---
+
+### 11.22 exportProductionAssets
+
+Create:
+
+```text
+exports/all-scenes.json
+exports/all-storyboards.md
+exports/all-image-prompts.json
+exports/all-video-prompts.json
+exports/all-voiceovers.md
+exports/all-subtitles.srt
+```
+
+---
+
+### 11.23 writeFinalSummary
+
+Create:
+
+```text
+exports/production-summary.md
+exports/final-continuity-report.md
+```
+
+Summary should include:
+
+* Project title
+* Total chapters generated
+* Total scenes generated
+* Output folder
+* Any warnings
+* Next recommended steps
+* Reminder that Phase 1 does not generate real images or videos
+
+---
+
+## 12. Progress Tracking
+
+The workflow must maintain:
+
+```text
+run-state.json
+```
+
+Update it after every major step.
+
+Example:
+
+```json
+{
+  "runId": "run_20260707_223000",
+  "projectSlug": "the-shadow-crown",
+  "status": "running",
+  "currentStep": "generate_image_prompts",
+  "currentChapter": 4,
+  "totalChapters": 10,
+  "progressPercent": 47,
+  "startedAt": "2026-07-07T22:30:00.000Z",
+  "outputPath": "outputs/the-shadow-crown",
+  "logs": [
+    "Started production workflow",
+    "Generated story bible",
+    "Generated chapter 1"
+  ]
+}
+```
+
+Progress percent can be approximate.
+
+---
+
+## 13. Logging
+
+Create:
+
+```text
+logs/run.log
+```
+
+Log:
+
+* workflow start
+* each major step
+* chapter start
+* chapter completion
+* validation warnings
+* errors
+* workflow completion
+
+Example:
+
+```text
+[2026-07-07T22:30:00.000Z] Started production workflow
+[2026-07-07T22:30:01.000Z] Generated story bible
+[2026-07-07T22:30:02.000Z] Started chapter 1
+[2026-07-07T22:30:03.000Z] Completed chapter 1
+```
+
+---
+
+## 14. Error Handling
+
+The app should fail clearly.
+
+Examples:
+
+### Invalid input
+
+```text
+Invalid production input:
+- project.title is required
+- chapterConfig.totalChapters must be at least 1
+```
+
+### Unknown character
+
+```text
+Continuity warning:
+Scene 3 references unknown character: "shadow_king"
+```
+
+### File write error
+
+```text
+Failed to write file:
+outputs/the-shadow-crown/chapters/chapter-0001/scenes.json
+```
+
+When an error happens:
+
+* update run-state.json
+* set status to failed
+* write error to logs
+* return clear API response
+* show error in UI
+
+---
+
+## 15. Frontend Progress Display
+
+After clicking Start, UI should show:
+
+* current status
+* current step
+* current chapter
+* total chapters
+* progress bar
+* recent logs
+* output path when completed
+
+Example:
+
+```text
+Status: Running
+Current Step: Generating Storyboard
+Chapter: 7 / 20
+Progress: 42%
+```
+
+When completed:
+
+```text
+Production completed.
+
+Output:
+outputs/the-shadow-crown
+```
+
+---
+
+## 16. Suggested Source Structure
+
+```text
+src/
+├── app/
+│   ├── server.ts
+│   └── routes/
+│       └── production.routes.ts
+├── frontend/
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── pages/
+│   │   └── ProductionPage.tsx
+│   └── components/
+│       ├── ProductionForm.tsx
+│       ├── CharacterForm.tsx
+│       ├── ProgressPanel.tsx
+│       └── LogPanel.tsx
+├── workflow/
+│   ├── runNovelProduction.ts
+│   ├── workflowContext.ts
+│   └── progressTracker.ts
+├── steps/
+│   ├── validateInput.ts
+│   ├── createProjectFolder.ts
+│   ├── saveOriginalInput.ts
+│   ├── generateStoryBible.ts
+│   ├── generateWorldBible.ts
+│   ├── generateCharacterBible.ts
+│   ├── generateVisualReferenceBible.ts
+│   ├── generateArcPlan.ts
+│   ├── generateChapterPlan.ts
+│   ├── generateChapterOutline.ts
+│   ├── generateChapterDraft.ts
+│   ├── splitChapterIntoScenes.ts
+│   ├── runContinuityCheck.ts
+│   ├── reviseChapter.ts
+│   ├── generateStoryboard.ts
+│   ├── generateImagePrompts.ts
+│   ├── generateVideoPrompts.ts
+│   ├── generateVoiceover.ts
+│   ├── generateSubtitles.ts
+│   ├── updateTimeline.ts
+│   ├── exportFullNovel.ts
+│   ├── exportProductionAssets.ts
+│   └── writeFinalSummary.ts
+├── schemas/
+│   ├── productionInput.schema.ts
+│   ├── project.schema.ts
+│   ├── character.schema.ts
+│   ├── scene.schema.ts
+│   ├── imagePrompt.schema.ts
+│   ├── videoPrompt.schema.ts
+│   └── runState.schema.ts
+├── services/
+│   ├── fileStore.ts
+│   ├── slugService.ts
+│   ├── templateRenderer.ts
+│   ├── logService.ts
+│   └── runRegistry.ts
+├── types/
+│   └── index.ts
+└── utils/
+    ├── date.ts
+    ├── path.ts
+    └── assertNever.ts
+```
+
+---
+
+## 17. Required Services
+
+### FileStore
+
+Implement:
+
+```ts
+readText(filePath: string): Promise<string>
+writeText(filePath: string, content: string): Promise<void>
+readJson<T>(filePath: string): Promise<T>
+writeJson<T>(filePath: string, data: T): Promise<void>
+exists(path: string): Promise<boolean>
+ensureDir(path: string): Promise<void>
+listFiles(path: string, extension?: string): Promise<string[]>
+```
+
+Use async fs APIs only.
+
+### ProgressTracker
+
+Implement:
+
+```ts
+setStep(step: string): Promise<void>
+setChapter(chapterNumber: number): Promise<void>
+log(message: string): Promise<void>
+fail(error: Error): Promise<void>
+complete(): Promise<void>
+getState(): RunState
+```
+
+### SlugService
+
+Implement:
+
+```ts
+slugifyTitle(title: string): string
+createUniqueProjectSlug(title: string, outputsDir: string): Promise<string>
+```
+
+### TemplateRenderer
+
+Implement simple template replacement:
+
+```ts
+render(template: string, variables: Record<string, string | number>): string
+```
+
+Example:
+
+```text
+Hello {{name}}
+```
+
+becomes:
+
+```text
+Hello Arin
+```
+
+No advanced templating required in Phase 1.
+
+---
+
+## 18. Testing Requirements
+
+Use Vitest.
+
+Add tests for:
+
+### FileStore
+
+* write/read text
+* write/read JSON
+* ensure directory
+* exists
+
+### Schemas
+
+* valid production input passes
+* missing title fails
+* invalid totalChapters fails
+* invalid scene fails
+
+### Workflow
+
+* run workflow with 1 chapter
+* creates expected output folder
+* creates story bible
+* creates chapter-final.md
+* creates scenes.json
+* creates image-prompts.json
+* creates video-prompts.json
+* creates exports/full-novel.md
+
+### Continuity Check
+
+* unknown character generates warning
+* missing visual focus generates warning
+* invalid scene count generates warning
+
+---
+
+## 19. Development Commands
+
+Add package scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:web\"",
+    "dev:server": "tsx watch src/app/server.ts",
+    "dev:web": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  }
+}
+```
+
+If using a different structure, keep equivalent commands.
+
+---
+
+## 20. README Requirements
+
+Create README.md with:
+
+* Project overview
+* Phase 1 scope
+* What the app generates
+* What the app does not generate
+* Installation
+* Development commands
+* How to open local web UI
+* How to run production workflow
+* Output folder explanation
+* Architecture overview
+* Future phases
+
+Important README note:
+
+```md
+Phase 1 does not generate real images or videos.
+It generates the production package required for image and video generation.
+```
+
+---
+
+## 21. Acceptance Criteria
+
+Phase 1 is complete when:
+
+1. `npm install` works.
+2. `npm run dev` starts local server and frontend.
+3. The web UI opens successfully.
+4. User can fill production form.
+5. User can add at least two characters.
+6. User can enter total chapter count.
+7. User can click Start.
+8. Workflow runs end-to-end.
+9. Progress updates are visible in UI.
+10. Output project folder is created.
+11. Knowledge base files are generated.
+12. Arc plan is generated.
+13. Chapter plan is generated.
+14. For every chapter, all required chapter files are generated.
+15. Export files are generated.
+16. run-state.json is created and updated.
+17. logs/run.log is created.
+18. Zod validation is used for JSON outputs.
+19. Tests pass.
+20. No external AI API is required.
+21. No database is required.
+22. README explains the whole workflow clearly.
+
+---
+
+## 22. Final Implementation Instruction for Codex
+
+Implement Phase 1 completely.
+
+Prioritize a working end-to-end workflow over perfect abstractions.
+
+Do not over-engineer.
+
+Keep code modular and testable.
+
+Use TypeScript strict mode.
+
+Use English comments in code.
+
+Do not integrate external AI APIs yet.
+
+Do not generate real images or videos yet.
+
+The final result should be a private local web app where the creator enters novel information, enters total chapter count, clicks Start, and receives a complete script production package in the output folder.
