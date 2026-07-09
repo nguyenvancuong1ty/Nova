@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import type { RunState } from "../../types";
 import { LogPanel } from "../components/LogPanel";
+import { MetricStrip } from "../components/MetricStrip";
+import { OutputPanel } from "../components/OutputPanel";
 import { ProductionForm } from "../components/ProductionForm";
 import { ProgressPanel } from "../components/ProgressPanel";
+import { StudioHeader } from "../components/StudioHeader";
 
 export function ProductionPage() {
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<RunState | null>(null);
+  const [characterCount, setCharacterCount] = useState(2);
 
   useEffect(() => {
     if (!runId) {
@@ -35,25 +39,20 @@ export function ProductionPage() {
   }, [runId]);
 
   return (
-    <main
-      style={{
-        maxWidth: 1120,
-        margin: "0 auto",
-        padding: "32px 20px 48px",
-        display: "grid",
-        gap: 24,
-      }}
-    >
-      <header>
-        <h1>Nova Phase 1</h1>
-        <p>
-          Novel-to-video script production engine for deterministic Phase 1
-          output generation.
-        </p>
-      </header>
-      <ProductionForm onStarted={setRunId} />
-      <ProgressPanel status={status} />
-      <LogPanel logs={status?.logs ?? []} />
+    <main className="studio-page">
+      <StudioHeader status={status} />
+      <MetricStrip status={status} characterCount={characterCount} />
+      <section className="studio-workspace">
+        <ProductionForm
+          onStarted={setRunId}
+          onCharacterCountChange={setCharacterCount}
+        />
+        <aside className="studio-sidebar">
+          <ProgressPanel status={status} />
+          <LogPanel logs={status?.logs ?? []} />
+          <OutputPanel outputPath={status?.outputPath ?? ""} />
+        </aside>
+      </section>
     </main>
   );
 }

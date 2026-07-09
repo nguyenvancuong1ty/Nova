@@ -1,4 +1,7 @@
 import { join } from "node:path";
+import type { GenerationService } from "../llm/generationService";
+import { buildChapterPlanPrompt } from "../llm/promptTemplates/planningPrompts";
+import { LlmChapterPlanSchema } from "../llm/schemas/chapterPlan.schema";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
 import type { ArcPlanEntry, ChapterPlanEntry, ProductionInput } from "../types";
@@ -9,8 +12,9 @@ export async function generateChapterPlan(
   input: ProductionInput,
   arcs: ArcPlanEntry[],
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<ChapterPlanEntry[]> {
-  const chapterPlans: ChapterPlanEntry[] = Array.from(
+  const fallbackChapterPlans: ChapterPlanEntry[] = Array.from(
     { length: input.chapterConfig.totalChapters },
     (_, index) => {
       const chapterNumber = index + 1;
@@ -43,6 +47,15 @@ export async function generateChapterPlan(
       };
     },
   );
+  const chapterPlans = generationService
+    ? (
+        await generationService.generateStructured({
+          step: "generate_chapter_plan",
+          schema: LlmChapterPlanSchema,
+          messages: buildChapterPlanPrompt(input, arcs),
+        })
+      ).data
+    : fallbackChapterPlans;
 
   const storyPlan = `# Full Story Plan
 

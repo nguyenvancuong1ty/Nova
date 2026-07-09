@@ -12,14 +12,12 @@ export function CharacterForm({
   onChange,
 }: CharacterFormProps) {
   return (
-    <fieldset
-      style={{ border: "1px solid #d0d7de", padding: 16, borderRadius: 12 }}
-    >
-      <legend>Character {index + 1}</legend>
-      <label>
-        Name
+    <fieldset className="character-card">
+      <legend>Nhân vật {index + 1}</legend>
+      <label className="field-card">
+        <span>Tên nhân vật</span>
         <input
-          aria-label={`Character ${index + 1} Name`}
+          aria-label={`Tên nhân vật ${index + 1}`}
           value={character.name}
           onChange={(event) =>
             onChange({
@@ -30,8 +28,8 @@ export function CharacterForm({
           }
         />
       </label>
-      <label>
-        Role
+      <label className="field-card">
+        <span>Vai trò</span>
         <select
           value={character.role}
           onChange={(event) =>
@@ -41,17 +39,17 @@ export function CharacterForm({
             })
           }
         >
-          <option value="protagonist">Protagonist</option>
-          <option value="antagonist">Antagonist</option>
-          <option value="supporting">Supporting</option>
-          <option value="mentor">Mentor</option>
-          <option value="love_interest">Love Interest</option>
-          <option value="rival">Rival</option>
-          <option value="other">Other</option>
+          <option value="protagonist">Nhân vật chính</option>
+          <option value="antagonist">Phản diện</option>
+          <option value="supporting">Hỗ trợ</option>
+          <option value="mentor">Cố vấn</option>
+          <option value="love_interest">Tuyến tình cảm</option>
+          <option value="rival">Đối thủ</option>
+          <option value="other">Khác</option>
         </select>
       </label>
-      <label>
-        Visual Description
+      <label className="field-card">
+        <span>Mô tả ngoại hình</span>
         <textarea
           value={character.visualDescription}
           onChange={(event) =>

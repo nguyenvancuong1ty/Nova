@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import type { GenerationService } from "../llm/generationService";
+import { buildStoryboardPrompt } from "../llm/promptTemplates/scenePrompts";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
 import type { Scene } from "../types";
@@ -17,8 +19,9 @@ export async function generateStoryboard(
   chapterNumber: number,
   scenes: Scene[],
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<string> {
-  const content = `# Storyboard - Chapter ${String(chapterNumber).padStart(4, "0")}
+  const fallbackContent = `# Storyboard - Chapter ${String(chapterNumber).padStart(4, "0")}
 
 ${scenes
   .map(
@@ -37,6 +40,14 @@ Sound Mood: Atmospheric tension with ${scene.emotionalBeat.toLowerCase()} undert
   )
   .join("\n\n")}
 `;
+  const content = generationService
+    ? (
+        await generationService.generateMarkdown({
+          step: "generate_storyboard",
+          messages: buildStoryboardPrompt(chapterNumber, scenes),
+        })
+      ).content
+    : fallbackContent;
   await fileStore.writeText(
     join(getChapterDir(outputPath, chapterNumber), "storyboard.md"),
     content,

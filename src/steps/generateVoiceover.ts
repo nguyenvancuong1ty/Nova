@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import type { GenerationService } from "../llm/generationService";
+import { buildVoiceoverPrompt } from "../llm/promptTemplates/adaptationPrompts";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
 import type { Scene } from "../types";
@@ -9,8 +11,9 @@ export async function generateVoiceover(
   chapterNumber: number,
   scenes: Scene[],
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<string> {
-  const content = `# Voiceover - Chapter ${String(chapterNumber).padStart(4, "0")}
+  const fallbackContent = `# Voiceover - Chapter ${String(chapterNumber).padStart(4, "0")}
 
 ${scenes
   .map(
@@ -20,6 +23,14 @@ ${scene.summary}`,
   )
   .join("\n\n")}
 `;
+  const content = generationService
+    ? (
+        await generationService.generateMarkdown({
+          step: "generate_voiceover",
+          messages: buildVoiceoverPrompt(chapterNumber, scenes),
+        })
+      ).content
+    : fallbackContent;
 
   await fileStore.writeText(
     join(getChapterDir(outputPath, chapterNumber), "voiceover.md"),

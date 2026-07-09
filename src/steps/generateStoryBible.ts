@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import { buildStoryBiblePrompt } from "../llm/promptTemplates/planningPrompts";
+import type { GenerationService } from "../llm/generationService";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
 import type { ProductionInput } from "../types";
@@ -7,9 +9,10 @@ export async function generateStoryBible(
   outputPath: string,
   input: ProductionInput,
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<string> {
   const relativePath = "knowledge-base/story-bible.md";
-  const content = `# Story Bible
+  const fallbackContent = `# Story Bible
 
 ## Title
 ${input.project.title}
@@ -47,6 +50,14 @@ ${input.story.importantThemes.join(", ")}
 ## Long-term Story Promise
 The series steadily expands the consequences of ${input.story.mainPremise.toLowerCase()} while paying off ${input.story.mainMystery.toLowerCase()}.
 `;
+  const content = generationService
+    ? (
+        await generationService.generateMarkdown({
+          step: "generate_story_bible",
+          messages: buildStoryBiblePrompt(input),
+        })
+      ).content
+    : fallbackContent;
   await fileStore.writeText(join(outputPath, relativePath), content);
   return relativePath;
 }

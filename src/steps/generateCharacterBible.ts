@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import type { GenerationService } from "../llm/generationService";
+import { buildCharacterBiblePrompt } from "../llm/promptTemplates/planningPrompts";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
 import type { ProductionInput } from "../types";
@@ -7,6 +9,7 @@ export async function generateCharacterBible(
   outputPath: string,
   input: ProductionInput,
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<string[]> {
   const relativePaths: string[] = ["knowledge-base/character-bible.md"];
   const sections = input.characters.map((character) => {
@@ -25,10 +28,20 @@ export async function generateCharacterBible(
 - Character Arc Direction: ${character.name} is pushed toward a decisive confrontation with the story's core conflict.
 - Visual Consistency Rules: Preserve the core visual description and role silhouette in every scene.`;
   });
+  const fallbackContent = `# Character Bible\n\n${sections.join("\n\n")}\n`;
+
+  const content = generationService
+    ? (
+        await generationService.generateMarkdown({
+          step: "generate_character_bible",
+          messages: buildCharacterBiblePrompt(input),
+        })
+      ).content
+    : fallbackContent;
 
   await fileStore.writeText(
     join(outputPath, relativePaths[0]),
-    `# Character Bible\n\n${sections.join("\n\n")}\n`,
+    content,
   );
 
   await Promise.all(

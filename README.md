@@ -72,12 +72,39 @@ npm run dev
 ```
 
 2. Open the Vite local URL shown in the terminal, usually `http://localhost:5173`.
-3. Fill the production form.
-4. Add or edit characters as needed.
-5. Click `Start Production`.
-6. Watch status, step, chapter progress, and logs update in the UI.
+3. Use the top summary band to confirm the current run context.
+4. Configure the project from the left workspace panel using the `Dự án`, `Cốt truyện`, `Nhân vật`, and `Video` tabs.
+5. Click `Bắt đầu sản xuất`.
+6. Watch status, step, chapter progress, logs, and output path update in the right monitoring column.
 
 Vite proxies `/api` requests to the Express server on `http://localhost:3000` during development.
+
+## Phase 2 Environment
+
+To enable OpenRouter-backed generation, set:
+
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL_TIER_PLANNING`
+- `OPENROUTER_MODEL_TIER_LONGFORM`
+- `OPENROUTER_MODEL_TIER_SCENE`
+- `OPENROUTER_MODEL_TIER_ADAPTATION`
+- `OPENROUTER_MODEL_TIER_UTILITY`
+
+Optional:
+
+- `OPENROUTER_BASE_URL`
+- `OPENROUTER_APP_NAME`
+- `OPENROUTER_APP_URL`
+
+## Excel Import
+
+The workspace supports strict Excel import from one sheet with one data row.
+
+- Use the first sheet only
+- Provide exactly one populated row
+- Use `|` for flat list fields such as `genres`, `important_themes`, and locations
+- Put all characters in the `characters_json` column as a JSON array
+- Use the `Tải file mẫu` action in the UI to download a valid workbook template
 
 ## Output Folder
 

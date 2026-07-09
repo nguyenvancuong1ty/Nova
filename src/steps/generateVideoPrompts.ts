@@ -1,4 +1,7 @@
 import { join } from "node:path";
+import { z } from "zod";
+import type { GenerationService } from "../llm/generationService";
+import { buildVideoPromptPrompt } from "../llm/promptTemplates/adaptationPrompts";
 import { VideoPromptSchema } from "../schemas/videoPrompt.schema";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
@@ -18,8 +21,9 @@ export async function generateVideoPrompts(
   chapterNumber: number,
   scenes: Scene[],
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<VideoPrompt[]> {
-  const prompts = scenes.map((scene, index) =>
+  const fallbackPrompts = scenes.map((scene, index) =>
     VideoPromptSchema.parse({
       id: `video-ch${String(chapterNumber).padStart(4, "0")}-sc${String(scene.sceneNumber).padStart(3, "0")}`,
       chapterNumber,
@@ -31,6 +35,15 @@ export async function generateVideoPrompts(
       soundDesignNotes: `Low ambient tone supporting ${scene.emotionalBeat.toLowerCase()}.`,
     }),
   );
+  const prompts = generationService
+    ? (
+        await generationService.generateStructured({
+          step: "generate_video_prompts",
+          schema: z.array(VideoPromptSchema),
+          messages: buildVideoPromptPrompt(input, chapterNumber, scenes),
+        })
+      ).data.map((prompt) => VideoPromptSchema.parse(prompt))
+    : fallbackPrompts;
 
   await fileStore.writeJson(
     join(getChapterDir(outputPath, chapterNumber), "video-prompts.json"),

@@ -3,3 +3,4 @@ dist/
 outputs/
 .DS_Store
 *.log
+.env

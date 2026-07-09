@@ -1,9 +1,20 @@
-import { useState, type FormEvent } from "react";
+import * as XLSX from "xlsx";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import { parseExcelProductionRows } from "../importers/excelProductionInput";
+import { createExcelTemplateWorkbook } from "../importers/excelTemplate";
 import type { CharacterInput, ProductionInput } from "../../types";
 import { CharacterForm } from "./CharacterForm";
+import { WorkspaceTabs } from "./WorkspaceTabs";
 
 interface ProductionFormProps {
   onStarted: (runId: string) => void;
+  onCharacterCountChange: (count: number) => void;
 }
 
 const defaultCharacters: CharacterInput[] = [
@@ -72,10 +83,23 @@ const defaultInput: ProductionInput = {
   },
 };
 
-export function ProductionForm({ onStarted }: ProductionFormProps) {
+const workspaceTabs = ["Dự án", "Cốt truyện", "Nhân vật", "Video"] as const;
+
+export function ProductionForm({
+  onStarted,
+  onCharacterCountChange,
+}: ProductionFormProps) {
   const [form, setForm] = useState<ProductionInput>(defaultInput);
+  const [activeTab, setActiveTab] =
+    useState<(typeof workspaceTabs)[number]>("Dự án");
   const [outputPathHint, setOutputPathHint] = useState("");
   const [error, setError] = useState("");
+  const [importError, setImportError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    onCharacterCountChange(form.characters.length);
+  }, [form.characters.length, onCharacterCountChange]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,130 +121,327 @@ export function ProductionForm({ onStarted }: ProductionFormProps) {
     onStarted(payload.runId);
   }
 
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      if (!sheet) {
+        throw new Error("Không tìm thấy sheet dữ liệu trong file Excel.");
+      }
+
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+        defval: "",
+      });
+      const parsed = parseExcelProductionRows(rows);
+      setForm(parsed);
+      setImportError("");
+      setError("");
+      setOutputPathHint("");
+    } catch (nextError) {
+      setImportError(
+        nextError instanceof Error
+          ? nextError.message
+          : "Import Excel thất bại.",
+      );
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function handleDownloadTemplate() {
+    const workbook = createExcelTemplateWorkbook();
+    XLSX.writeFile(workbook, "nova-production-template.xlsx");
+  }
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
-      <section
-        style={{ border: "1px solid #d0d7de", padding: 16, borderRadius: 12 }}
-      >
-        <h2>Novel Production Setup</h2>
-        <label>
-          Project Title
-          <input
-            aria-label="Project Title"
-            value={form.project.title}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                project: { ...form.project, title: event.target.value },
-              })
-            }
-          />
-        </label>
-        <label>
-          Creator Name
-          <input
-            value={form.project.creatorName ?? ""}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                project: { ...form.project, creatorName: event.target.value },
-              })
-            }
-          />
-        </label>
-        <label>
-          Total Chapters
-          <input
-            type="number"
-            value={form.chapterConfig.totalChapters}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                chapterConfig: {
-                  ...form.chapterConfig,
-                  totalChapters: Number(event.target.value),
-                },
-              })
-            }
-          />
-        </label>
-        <label>
-          Main Premise
-          <textarea
-            value={form.story.mainPremise}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                story: { ...form.story, mainPremise: event.target.value },
-              })
-            }
-          />
-        </label>
-        <label>
-          Visual Style
-          <input
-            value={form.video.visualStyle}
-            onChange={(event) =>
-              setForm({
-                ...form,
-                video: { ...form.video, visualStyle: event.target.value },
-              })
-            }
-          />
-        </label>
-      </section>
-
-      <section style={{ display: "grid", gap: 12 }}>
-        <h2>Characters</h2>
-        {form.characters.map((character, index) => (
-          <CharacterForm
-            key={`${character.id}-${index}`}
-            character={character}
-            index={index}
-            onChange={(nextCharacter) =>
-              setForm({
-                ...form,
-                characters: form.characters.map((item, itemIndex) =>
-                  itemIndex === index ? nextCharacter : item,
-                ),
-              })
-            }
-          />
-        ))}
-        <button
-          type="button"
-          onClick={() =>
-            setForm({
-              ...form,
-              characters: [
-                ...form.characters,
-                {
-                  id: `character-${form.characters.length + 1}`,
-                  name: "",
-                  role: "supporting",
-                  visualDescription: "",
-                  personality: [],
-                  relationships: [],
-                },
-              ],
-            })
+    <form className="workspace-panel" onSubmit={handleSubmit}>
+      <div className="workspace-panel__header">
+        <div>
+          <p className="eyebrow">Cấu hình dự án</p>
+          <h2>Thiết lập cốt lõi</h2>
+        </div>
+        <WorkspaceTabs
+          tabs={workspaceTabs}
+          activeTab={activeTab}
+          onChange={(tab) =>
+            setActiveTab(tab as (typeof workspaceTabs)[number])
           }
-        >
-          Add Character
-        </button>
-      </section>
-
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <button type="submit">Start Production</button>
-        <button type="button" onClick={() => setForm(defaultInput)}>
-          Reset Form
-        </button>
-        <button type="button">Open Output Folder</button>
-        <button type="button">View Logs</button>
+        />
       </div>
 
-      {error ? <p>{error}</p> : null}
-      {outputPathHint ? <p>Output Path: {outputPathHint}</p> : null}
+      {activeTab === "Dự án" ? (
+        <section className="field-grid">
+          <label className="field-card">
+            <span>Tên dự án</span>
+            <input
+              aria-label="Tên dự án"
+              value={form.project.title}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  project: { ...form.project, title: event.target.value },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Người tạo</span>
+            <input
+              aria-label="Người tạo"
+              value={form.project.creatorName ?? ""}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  project: { ...form.project, creatorName: event.target.value },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Số chapter</span>
+            <input
+              aria-label="Số chapter"
+              type="number"
+              value={form.chapterConfig.totalChapters}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  chapterConfig: {
+                    ...form.chapterConfig,
+                    totalChapters: Number(event.target.value),
+                  },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Phong cách hình ảnh</span>
+            <input
+              aria-label="Phong cách hình ảnh"
+              value={form.video.visualStyle}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  video: { ...form.video, visualStyle: event.target.value },
+                })
+              }
+            />
+          </label>
+        </section>
+      ) : null}
+
+      {activeTab === "Cốt truyện" ? (
+        <section className="stack-fields">
+          <label className="field-card">
+            <span>Tiền đề chính</span>
+            <textarea
+              aria-label="Tiền đề chính"
+              value={form.story.mainPremise}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  story: { ...form.story, mainPremise: event.target.value },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Xung đột chính</span>
+            <textarea
+              aria-label="Xung đột chính"
+              value={form.story.mainConflict}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  story: { ...form.story, mainConflict: event.target.value },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Hướng kết thúc</span>
+            <textarea
+              aria-label="Hướng kết thúc"
+              value={form.story.endingDirection}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  story: { ...form.story, endingDirection: event.target.value },
+                })
+              }
+            />
+          </label>
+        </section>
+      ) : null}
+
+      {activeTab === "Nhân vật" ? (
+        <section className="stack-fields">
+          {form.characters.map((character, index) => (
+            <CharacterForm
+              key={`${character.id}-${index}`}
+              character={character}
+              index={index}
+              onChange={(nextCharacter) =>
+                setForm({
+                  ...form,
+                  characters: form.characters.map((item, itemIndex) =>
+                    itemIndex === index ? nextCharacter : item,
+                  ),
+                })
+              }
+            />
+          ))}
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={() =>
+              setForm({
+                ...form,
+                characters: [
+                  ...form.characters,
+                  {
+                    id: `character-${form.characters.length + 1}`,
+                    name: "",
+                    role: "supporting",
+                    visualDescription: "",
+                    personality: [],
+                    relationships: [],
+                  },
+                ],
+              })
+            }
+          >
+            Thêm nhân vật
+          </button>
+        </section>
+      ) : null}
+
+      {activeTab === "Video" ? (
+        <section className="field-grid">
+          <label className="field-card">
+            <span>Tỉ lệ khung hình</span>
+            <select
+              aria-label="Tỉ lệ khung hình"
+              value={form.video.aspectRatio}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  video: {
+                    ...form.video,
+                    aspectRatio: event.target.value as "16:9" | "9:16" | "1:1",
+                  },
+                })
+              }
+            >
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+              <option value="1:1">1:1</option>
+            </select>
+          </label>
+          <label className="field-card">
+            <span>Phong cách camera</span>
+            <input
+              aria-label="Phong cách camera"
+              value={form.video.cameraStyle}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  video: { ...form.video, cameraStyle: event.target.value },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Motion video</span>
+            <textarea
+              aria-label="Motion video"
+              value={form.video.videoMotionStyle}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  video: {
+                    ...form.video,
+                    videoMotionStyle: event.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+          <label className="field-card">
+            <span>Phong cách voiceover</span>
+            <textarea
+              aria-label="Phong cách voiceover"
+              value={form.video.voiceoverStyle}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  video: { ...form.video, voiceoverStyle: event.target.value },
+                })
+              }
+            />
+          </label>
+        </section>
+      ) : null}
+
+      <p className="workspace-note">
+        Màn hình chính chỉ giữ các trường cốt lõi. Phần chi tiết được gom theo
+        nhóm để dễ quét và đỡ mệt khi nhập.
+      </p>
+
+      <div className="workspace-actions">
+        <button type="submit" className="primary-action">
+          Bắt đầu sản xuất
+        </button>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Import Excel
+        </button>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={handleDownloadTemplate}
+        >
+          Tải file mẫu
+        </button>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => setForm(defaultInput)}
+        >
+          Khôi phục mẫu
+        </button>
+        <button type="button" className="secondary-action">
+          Mở thư mục output
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleImportFile}
+          hidden
+        />
+      </div>
+
+      {importError ? (
+        <p className="import-error-box" role="alert">
+          {importError}
+        </p>
+      ) : null}
+      {error ? <p className="feedback feedback--error">{error}</p> : null}
+      {outputPathHint ? (
+        <p className="feedback">Đường dẫn output: {outputPathHint}</p>
+      ) : null}
     </form>
   );
 }

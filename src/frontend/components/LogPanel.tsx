@@ -4,25 +4,18 @@ interface LogPanelProps {
 
 export function LogPanel({ logs }: LogPanelProps) {
   return (
-    <section>
-      <h2>Logs</h2>
-      <div
-        style={{
-          maxHeight: 220,
-          overflow: "auto",
-          border: "1px solid #d0d7de",
-          padding: 12,
-          borderRadius: 12,
-        }}
-      >
+    <section className="log-card">
+      <p className="eyebrow">Log trực tiếp</p>
+      <h2>Nhật ký xử lý</h2>
+      <div className="log-card__body">
         {logs.length > 0 ? (
           logs.slice(-12).map((log) => (
-            <p key={log} style={{ margin: "0 0 8px" }}>
+            <p key={log} className="log-line">
               {log}
             </p>
           ))
         ) : (
-          <p>No logs yet.</p>
+          <p>Chưa có log nào được ghi.</p>
         )}
       </div>
     </section>

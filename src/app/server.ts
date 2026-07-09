@@ -1,5 +1,7 @@
 import express, { type Express } from "express";
 import { join } from "node:path";
+import { ensureEnvFilesLoaded } from "../config/loadEnvFiles";
+import { createRuntimeGenerationService } from "../llm/createRuntimeGenerationService";
 import { RunRegistry } from "../services/runRegistry";
 import { createProductionRouter } from "./routes/production.routes";
 
@@ -8,8 +10,10 @@ interface CreateServerOptions {
 }
 
 export function createServer(options: CreateServerOptions = {}): Express {
+  ensureEnvFilesLoaded();
   const app = express();
   const registry = new RunRegistry();
+  const generationService = createRuntimeGenerationService();
 
   app.use(express.json({ limit: "2mb" }));
   app.use(
@@ -17,6 +21,7 @@ export function createServer(options: CreateServerOptions = {}): Express {
     createProductionRouter({
       outputsDir: options.outputsDir,
       registry,
+      generationService,
     }),
   );
 

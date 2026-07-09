@@ -1,4 +1,7 @@
 import { join } from "node:path";
+import { z } from "zod";
+import type { GenerationService } from "../llm/generationService";
+import { buildImagePromptPrompt } from "../llm/promptTemplates/adaptationPrompts";
 import { ImagePromptSchema } from "../schemas/imagePrompt.schema";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
@@ -11,8 +14,9 @@ export async function generateImagePrompts(
   chapterNumber: number,
   scenes: Scene[],
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<ImagePrompt[]> {
-  const prompts = scenes.map((scene) =>
+  const fallbackPrompts = scenes.map((scene) =>
     ImagePromptSchema.parse({
       id: `image-ch${String(chapterNumber).padStart(4, "0")}-sc${String(scene.sceneNumber).padStart(3, "0")}`,
       chapterNumber,
@@ -29,6 +33,15 @@ export async function generateImagePrompts(
       ],
     }),
   );
+  const prompts = generationService
+    ? (
+        await generationService.generateStructured({
+          step: "generate_image_prompts",
+          schema: z.array(ImagePromptSchema),
+          messages: buildImagePromptPrompt(input, chapterNumber, scenes),
+        })
+      ).data.map((prompt) => ImagePromptSchema.parse(prompt))
+    : fallbackPrompts;
 
   await fileStore.writeJson(
     join(getChapterDir(outputPath, chapterNumber), "image-prompts.json"),

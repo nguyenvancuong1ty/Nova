@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { ZodError } from "zod";
+import type { GenerationService } from "../llm/generationService";
 import { createFileStore, type FileStore } from "../services/fileStore";
 import { RunRegistry } from "../services/runRegistry";
 import { createRunId } from "../utils/date";
@@ -34,6 +35,7 @@ interface RunNovelProductionOptions {
   runId?: string;
   registry?: RunRegistry;
   fileStore?: FileStore;
+  generationService?: GenerationService;
 }
 
 export async function runNovelProduction(
@@ -84,13 +86,28 @@ export async function runNovelProduction(
       saveOriginalInput(outputPath, input, fileStore),
     );
     await recordStep("generate_story_bible", () =>
-      generateStoryBible(outputPath, input, fileStore),
+      generateStoryBible(
+        outputPath,
+        input,
+        fileStore,
+        options.generationService,
+      ),
     );
     await recordStep("generate_world_bible", () =>
-      generateWorldBible(outputPath, input, fileStore),
+      generateWorldBible(
+        outputPath,
+        input,
+        fileStore,
+        options.generationService,
+      ),
     );
     await recordStep("generate_character_bible", () =>
-      generateCharacterBible(outputPath, input, fileStore),
+      generateCharacterBible(
+        outputPath,
+        input,
+        fileStore,
+        options.generationService,
+      ),
     );
     await recordStep("generate_visual_reference_bible", () =>
       generateVisualReferenceBible(outputPath, input, fileStore),
@@ -98,7 +115,12 @@ export async function runNovelProduction(
 
     let arcs = [] as Awaited<ReturnType<typeof generateArcPlan>>;
     await recordStep("generate_arc_plan", async () => {
-      arcs = await generateArcPlan(outputPath, input, fileStore);
+      arcs = await generateArcPlan(
+        outputPath,
+        input,
+        fileStore,
+        options.generationService,
+      );
       return "planning/arc-plan.json";
     });
 
@@ -109,6 +131,7 @@ export async function runNovelProduction(
         input,
         arcs,
         fileStore,
+        options.generationService,
       );
       return ["planning/full-story-plan.md", "planning/chapter-plan.json"];
     });
@@ -136,7 +159,13 @@ export async function runNovelProduction(
         generateChapterOutline(outputPath, chapterPlan, fileStore),
       );
       await recordStep("generate_chapter_draft", () =>
-        generateChapterDraft(outputPath, input, chapterPlan, fileStore),
+        generateChapterDraft(
+          outputPath,
+          input,
+          chapterPlan,
+          fileStore,
+          options.generationService,
+        ),
       );
 
       let scenes = [] as Awaited<ReturnType<typeof splitChapterIntoScenes>>;
@@ -146,6 +175,7 @@ export async function runNovelProduction(
           input,
           chapterPlan,
           fileStore,
+          options.generationService,
         );
         return `chapters/chapter-${String(chapterPlan.chapterNumber).padStart(4, "0")}/scenes.json`;
       });
@@ -177,6 +207,7 @@ export async function runNovelProduction(
           draftContent,
           continuityReport,
           fileStore,
+          options.generationService,
         );
       });
       await recordStep("generate_storyboard", () =>
@@ -185,6 +216,7 @@ export async function runNovelProduction(
           chapterPlan.chapterNumber,
           scenes,
           fileStore,
+          options.generationService,
         ),
       );
       await recordStep("generate_image_prompts", async () => {
@@ -194,6 +226,7 @@ export async function runNovelProduction(
           chapterPlan.chapterNumber,
           scenes,
           fileStore,
+          options.generationService,
         );
         return `chapters/chapter-${String(chapterPlan.chapterNumber).padStart(4, "0")}/image-prompts.json`;
       });
@@ -204,6 +237,7 @@ export async function runNovelProduction(
           chapterPlan.chapterNumber,
           scenes,
           fileStore,
+          options.generationService,
         );
         return `chapters/chapter-${String(chapterPlan.chapterNumber).padStart(4, "0")}/video-prompts.json`;
       });
@@ -213,6 +247,7 @@ export async function runNovelProduction(
           chapterPlan.chapterNumber,
           scenes,
           fileStore,
+          options.generationService,
         ),
       );
       await recordStep("generate_subtitles", () =>
@@ -221,6 +256,7 @@ export async function runNovelProduction(
           chapterPlan.chapterNumber,
           scenes,
           fileStore,
+          options.generationService,
         ),
       );
       await recordStep("update_timeline", () =>

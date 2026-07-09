@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import type { GenerationService } from "../llm/generationService";
+import { buildChapterDraftPrompt } from "../llm/promptTemplates/longformPrompts";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
 import type { ChapterPlanEntry, ProductionInput } from "../types";
@@ -14,6 +16,7 @@ export async function generateChapterDraft(
   input: ProductionInput,
   chapterPlan: ChapterPlanEntry,
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<string> {
   const sceneCount = getChapterSceneCount(input, chapterPlan.chapterNumber);
   const scenes = Array.from({ length: sceneCount }, (_, index) => {
@@ -25,10 +28,18 @@ ${buildSceneSummary(chapterPlan, chapterPlan.chapterNumber, sceneNumber)}
 Placeholder prose keeps the pacing deterministic while preserving enough structure for storyboard, prompt, and subtitle generation.`;
   }).join("\n\n");
 
-  const content = `# Chapter ${String(chapterPlan.chapterNumber).padStart(4, "0")} - ${chapterPlan.title}
+  const fallbackContent = `# Chapter ${String(chapterPlan.chapterNumber).padStart(4, "0")} - ${chapterPlan.title}
 
 ${scenes}
 `;
+  const content = generationService
+    ? (
+        await generationService.generateMarkdown({
+          step: "generate_chapter_draft",
+          messages: buildChapterDraftPrompt(input, chapterPlan),
+        })
+      ).content
+    : fallbackContent;
 
   await fileStore.writeText(
     join(

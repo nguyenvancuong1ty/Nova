@@ -1,3 +1,4 @@
+import type { GenerationService } from "../../llm/generationService";
 import { Router } from "express";
 import type { RunRegistry } from "../../services/runRegistry";
 import { slugifyTitle } from "../../services/slugService";
@@ -7,6 +8,7 @@ import type { RunState } from "../../types";
 interface ProductionRoutesOptions {
   outputsDir?: string;
   registry: RunRegistry;
+  generationService?: GenerationService;
 }
 
 export function createProductionRouter(
@@ -33,6 +35,7 @@ export function createProductionRouter(
       outputsDir: options.outputsDir,
       runId,
       registry: options.registry,
+      generationService: options.generationService,
     }).catch(() => {
       // Errors are persisted by the workflow tracker and surfaced via status polling.
     });

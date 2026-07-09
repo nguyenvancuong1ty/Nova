@@ -1,4 +1,7 @@
 import { join } from "node:path";
+import type { GenerationService } from "../llm/generationService";
+import { buildSceneBreakdownPrompt } from "../llm/promptTemplates/scenePrompts";
+import { LlmSceneBreakdownSchema } from "../llm/schemas/sceneBreakdown.schema";
 import { SceneSchema } from "../schemas/scene.schema";
 import type { FileStore } from "../services/fileStore";
 import { createFileStore } from "../services/fileStore";
@@ -17,10 +20,11 @@ export async function splitChapterIntoScenes(
   input: ProductionInput,
   chapterPlan: ChapterPlanEntry,
   fileStore: FileStore = createFileStore(),
+  generationService?: GenerationService,
 ): Promise<Scene[]> {
   const allCharacterIds = getPrimaryCharacters(input);
   const sceneCount = getChapterSceneCount(input, chapterPlan.chapterNumber);
-  const scenes: Scene[] = Array.from({ length: sceneCount }, (_, index) => {
+  const fallbackScenes: Scene[] = Array.from({ length: sceneCount }, (_, index) => {
     const sceneNumber = index + 1;
     return SceneSchema.parse({
       id: `scene-ch${String(chapterPlan.chapterNumber).padStart(4, "0")}-sc${String(sceneNumber).padStart(3, "0")}`,
@@ -44,6 +48,15 @@ export async function splitChapterIntoScenes(
       videoPotential: sceneNumber % 3 === 0 ? "high" : "medium",
     });
   });
+  const scenes = generationService
+    ? (
+        await generationService.generateStructured({
+          step: "split_chapter_into_scenes",
+          schema: LlmSceneBreakdownSchema,
+          messages: buildSceneBreakdownPrompt(input, chapterPlan),
+        })
+      ).data.map((scene) => SceneSchema.parse(scene))
+    : fallbackScenes;
 
   await fileStore.writeJson(
     join(getChapterDir(outputPath, chapterPlan.chapterNumber), "scenes.json"),
