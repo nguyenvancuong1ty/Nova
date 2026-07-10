@@ -25,7 +25,7 @@ export function getGenerationConfig(step: LlmStepId): GenerationConfig {
     tier: resolveTierForStep(step),
     outputMode: structuredSteps.has(step) ? "json" : "markdown",
     temperature: step === "generate_chapter_draft" ? 0.9 : 0.4,
-    maxTokens: step === "generate_chapter_draft" ? 12_000 : 4_000,
+    maxTokens: 20_000,
     repairAttempts: structuredSteps.has(step) ? 2 : 0,
   };
 }

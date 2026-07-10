@@ -1,5 +1,9 @@
 import type { ProductionInput, Scene } from "../../types";
 import type { LlmMessage } from "../types";
+import {
+  buildMarkdownContract,
+  buildStructuredArrayContract,
+} from "./contracts";
 
 export function buildImagePromptPrompt(
   input: ProductionInput,
@@ -10,7 +14,27 @@ export function buildImagePromptPrompt(
     {
       role: "system",
       content:
-        "You are an adaptation prompt designer. Return valid JSON only.",
+        `You are an adaptation prompt designer. ${buildStructuredArrayContract({
+          itemName: "image prompt",
+          fields: [
+            "id",
+            "chapterNumber",
+            "sceneNumber",
+            "prompt",
+            "negativePrompt",
+            "aspectRatio",
+            "style",
+            "characterReferences",
+            "characterConsistencyNotes",
+          ],
+          cardinality: `exactly ${scenes.length} items, one for every input scene`,
+          constraints: [
+            `chapterNumber must be ${chapterNumber} for every item.`,
+            "sceneNumber must match each input scene exactly once.",
+            'aspectRatio must be one of "16:9", "9:16", or "1:1".',
+            "characterReferences and characterConsistencyNotes must be arrays of strings.",
+          ],
+        })}`,
     },
     {
       role: "user",
@@ -28,7 +52,25 @@ export function buildVideoPromptPrompt(
     {
       role: "system",
       content:
-        "You are a cinematic prompt designer. Return valid JSON only.",
+        `You are a cinematic prompt designer. ${buildStructuredArrayContract({
+          itemName: "video prompt",
+          fields: [
+            "id",
+            "chapterNumber",
+            "sceneNumber",
+            "prompt",
+            "cameraMovement",
+            "durationSeconds",
+            "motionNotes",
+            "soundDesignNotes",
+          ],
+          cardinality: `exactly ${scenes.length} items, one for every input scene`,
+          constraints: [
+            `chapterNumber must be ${chapterNumber} for every item.`,
+            "sceneNumber must match each input scene exactly once.",
+            "durationSeconds must be a positive integer.",
+          ],
+        })}`,
     },
     {
       role: "user",
@@ -45,7 +87,11 @@ export function buildVoiceoverPrompt(
     {
       role: "system",
       content:
-        "You are a narration writer. Return Vietnamese markdown for voiceover.",
+        `You are a narration writer. ${buildMarkdownContract({
+          title: `# Voiceover - Chapter ${String(chapterNumber).padStart(4, "0")}`,
+          requiredSections: ["Narration"],
+          sceneBased: true,
+        })}`,
     },
     {
       role: "user",

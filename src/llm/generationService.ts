@@ -66,17 +66,47 @@ export function createGenerationService(
       messages: LlmMessage[];
     }) {
       const config = getGenerationConfig(input.step);
-      const response = await options.client.generate({
-        model: resolveModel(input.step),
-        messages: input.messages,
-        temperature: config.temperature,
-        max_tokens: config.maxTokens,
-      });
+      let messages = input.messages;
+      let lastError: unknown;
 
-      return {
-        data: parseStructuredJson(response.content, input.schema),
-        raw: response.raw,
-      };
+      for (let attempt = 0; attempt <= config.repairAttempts; attempt += 1) {
+        const response = await options.client.generate({
+          model: resolveModel(input.step),
+          messages,
+          temperature: config.temperature,
+          max_tokens: config.maxTokens,
+        });
+
+        try {
+          return {
+            data: parseStructuredJson(response.content, input.schema),
+            raw: response.raw,
+          };
+        } catch (error) {
+          lastError = error;
+
+          if (attempt === config.repairAttempts) {
+            throw error;
+          }
+
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown schema validation error";
+          const originalContract = input.messages.find(
+            (message) => message.role === "system",
+          )?.content;
+          messages = [
+            ...messages,
+            {
+              role: "user",
+              content: `Your previous response failed schema validation: ${errorMessage}\nRequired contract:\n${originalContract ?? "Return valid JSON matching the requested schema."}\nReturn only corrected valid JSON. Do not add markdown fences, prose, or wrapper keys unless the required contract explicitly requires them.\nPrevious response:\n${response.content}`,
+            },
+          ];
+        }
+      }
+
+      throw lastError instanceof Error
+        ? lastError
+        : new Error("Structured generation failed after repair attempts");
     },
   };
 }

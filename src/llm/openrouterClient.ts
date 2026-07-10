@@ -16,7 +16,7 @@ interface GenerateRequest {
 }
 
 const MAX_CONTENT_RETRIES = 2;
-const MAX_RETRY_TOKENS = 16_384;
+const MAX_RETRY_TOKENS = 20_000;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
